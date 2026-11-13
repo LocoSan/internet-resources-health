@@ -55,6 +55,6 @@ def read_json_files():
     for path in sorted(settings.RECORDS_DIR.glob("*.json")):
         try:
             rows.extend(validate_json(json.loads(path.read_text(encoding="utf-8-sig"))))
-        except (ValueError, OSError):
+        except (ValueError, OSError, RecursionError):
             skipped += 1
     return rows, skipped

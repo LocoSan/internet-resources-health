@@ -24,3 +24,11 @@ class CreateForm(MeasurementForm):
 
 class UploadForm(forms.Form):
     file = forms.FileField(label="Файл JSON", widget=forms.ClearableFileInput(attrs={"accept": ".json"}))
+
+    def clean_file(self):
+        upload = self.cleaned_data["file"]
+        if not upload.name.lower().endswith(".json"):
+            raise forms.ValidationError("Выберите файл с расширением .json.")
+        if upload.size > 256 * 1024:
+            raise forms.ValidationError("Размер файла больше 256 КБ.")
+        return upload

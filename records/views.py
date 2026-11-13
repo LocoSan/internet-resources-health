@@ -80,11 +80,9 @@ def delete(request, pk):
 def import_json(request):
     form = UploadForm(request.POST, request.FILES)
     if not form.is_valid():
-        return show_page(request, upload_error="Выберите непустой файл JSON.", status=400)
+        return show_page(request, upload_error=form.errors["file"][0], status=400)
     upload = form.cleaned_data["file"]
     try:
-        if upload.size > 256 * 1024:
-            raise ValueError("Размер файла больше 256 КБ.")
         rows = validate_json(json.loads(upload.read().decode("utf-8-sig")))
     except (UnicodeError, json.JSONDecodeError, RecursionError):
         return show_page(request, upload_error="Содержимое не является корректным JSON.", status=400)

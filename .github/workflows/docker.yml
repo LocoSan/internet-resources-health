@@ -1,0 +1,36 @@
+name: Docker and PostgreSQL
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start containers
+        run: |
+          cp .env.example .env
+          sed -i 's/DJANGO_DEBUG=1/DJANGO_DEBUG=0/' .env
+          docker compose config --quiet
+          docker compose up --build --wait
+      - name: Verify web, static files, and PostgreSQL tests
+        run: |
+          curl --fail --silent --show-error 'http://127.0.0.1:8003/?source=db' | grep -F 'Журнал показателей'
+          curl --fail --silent --show-error 'http://127.0.0.1:8003/static/records/search.js' > /dev/null
+          docker compose exec -T web python manage.py test
+      - name: Check data survives recreation of containers
+        run: |
+          docker compose exec -T web python manage.py shell -c "from datetime import date; from records.models import Measurement; Measurement.objects.create(patient='Docker test', date=date(2026, 10, 1), pulse=70, temperature=36.5)"
+          docker compose down
+          docker compose up --wait
+          curl --fail --silent --show-error 'http://127.0.0.1:8003/?source=db' | grep -F 'Docker test'
+      - name: Container logs
+        if: failure()
+        run: docker compose logs --no-color
+      - name: Cleanup
+        if: always()
+        run: docker compose down --volumes

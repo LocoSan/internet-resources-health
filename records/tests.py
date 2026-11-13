@@ -1,9 +1,14 @@
 import json
+import sqlite3
+from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase
+
+from .models import Measurement
 
 
 class JsonRecordsTests(SimpleTestCase):
@@ -54,6 +59,7 @@ class DatabaseRecordsTests(TestCase):
     def setUp(self):
         temporary = TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
+        self.settings_dir = temporary.name
         self.enterContext(self.settings(RECORDS_DIR=Path(temporary.name)))
 
     def test_database_create_duplicate_and_read(self):
@@ -84,3 +90,22 @@ class DatabaseRecordsTests(TestCase):
         self.assertRedirects(self.client.post(f"/delete/{row.pk}/"), "/?source=db")
         self.assertContains(self.client.get("/?source=db"), "Другая карточка")
         self.assertNotContains(self.client.get("/?source=db"), "Карточка А")
+
+    def test_import_sqlite_transfers_existing_rows_without_duplicates(self):
+        source = Path(self.settings_dir) / "old.sqlite3"
+        connection = sqlite3.connect(source)
+        try:
+            with connection:
+                connection.execute("CREATE TABLE records_measurement (patient, date, pulse, temperature)")
+                connection.execute("INSERT INTO records_measurement VALUES (?, ?, ?, ?)", (
+                    "Старая карточка", "2026-10-01", 73, 36.6,
+                ))
+        finally:
+            connection.close()
+
+        for _ in range(2):
+            call_command("import_sqlite", source, stdout=StringIO())
+        self.assertEqual(Measurement.objects.count(), 1)
+        row = Measurement.objects.get()
+        self.assertEqual((row.patient, row.date.isoformat(), row.pulse, str(row.temperature)),
+                         ("Старая карточка", "2026-10-01", 73, "36.6"))
