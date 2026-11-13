@@ -1,0 +1,20 @@
+{% load static %}
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Журнал показателей{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'records/style.css' %}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>Журнал показателей</h1>
+            <p>Учебные данные. Используйте вымышленные карточки.</p>
+        </header>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

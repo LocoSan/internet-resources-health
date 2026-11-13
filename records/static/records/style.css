@@ -1,0 +1,11 @@
+body { color: #1c2837; background: #f2f5f8; font: 16px/1.5 system-ui, sans-serif; margin: 0; }
+.container { max-width: 820px; padding: 24px 16px; margin: 0 auto; }
+section { background: #fff; border: 1px solid #ccd8e3; border-radius: 8px; padding: 18px; margin: 16px 0; }
+h1, h2 { margin-top: 0; }
+form label { display: block; }
+input, select, button { font: inherit; max-width: 100%; }
+button { cursor: pointer; padding: 6px 12px; }
+table { width: 100%; border-collapse: collapse; }
+td, th { text-align: left; border-bottom: 1px solid #ccd8e3; padding: 8px; }
+.table-responsive { overflow-x: auto; }
+.error, .errorlist { color: #a32222; }

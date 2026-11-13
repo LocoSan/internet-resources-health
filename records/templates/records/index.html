@@ -1,0 +1,43 @@
+{% extends "records/base.html" %}
+{% block content %}
+<section>
+    <h2>Добавить запись</h2>
+    <form method="post" action="{% url 'index' %}">
+        {% csrf_token %}
+        {% if form.errors %}<p class="error">Исправьте ошибки в форме.</p>{% endif %}
+        {{ form.as_p }}
+        <button type="submit">Сохранить</button>
+    </form>
+</section>
+
+<section>
+    <h2>Файлы JSON</h2>
+    {% if upload_error %}<p class="error" role="alert">Файл отклонён: {{ upload_error }}</p>{% endif %}
+    <form method="post" action="{% url 'import_json' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ upload_form.as_p }}
+        <button type="submit">Загрузить</button>
+    </form>
+    <p><a href="{% url 'export_json' %}">Скачать все записи JSON</a></p>
+</section>
+
+<section>
+    <h2>Сохранённые записи</h2>
+    {% if skipped %}<p class="error">Пропущено повреждённых файлов: {{ skipped }}.</p>{% endif %}
+    {% if rows %}
+    <p>Всего записей: {{ rows|length }}.</p>
+    <div class="table-responsive">
+        <table>
+            <thead><tr><th>Карточка</th><th>Дата</th><th>Пульс</th><th>Температура, °C</th></tr></thead>
+            <tbody>
+            {% for row in rows %}
+                <tr><td>{{ row.patient }}</td><td>{{ row.date }}</td><td>{{ row.pulse }}</td><td>{{ row.temperature }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p>Записей пока нет.</p>
+    {% endif %}
+</section>
+{% endblock %}
