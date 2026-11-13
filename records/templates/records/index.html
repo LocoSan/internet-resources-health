@@ -1,12 +1,13 @@
 {% extends "records/base.html" %}
+{% load static %}
 {% block content %}
 <section>
     <h2>Добавить запись</h2>
-    <form method="post" action="{% url 'index' %}">
+    <form method="post" action="{% url 'index' %}?source={{ source }}">
         {% csrf_token %}
         {% if form.errors %}<p class="error">Исправьте ошибки в форме.</p>{% endif %}
         {{ form.as_p }}
-        <button type="submit">Сохранить</button>
+        <button class="btn btn-primary" type="submit">Сохранить</button>
     </form>
 </section>
 
@@ -16,18 +17,29 @@
     <form method="post" action="{% url 'import_json' %}" enctype="multipart/form-data">
         {% csrf_token %}
         {{ upload_form.as_p }}
-        <button type="submit">Загрузить</button>
+        <button class="btn btn-outline-primary" type="submit">Загрузить</button>
     </form>
     <p><a href="{% url 'export_json' %}">Скачать все записи JSON</a></p>
 </section>
 
 <section>
     <h2>Сохранённые записи</h2>
+    <nav class="d-flex gap-2 mb-3" aria-label="Источник записей">
+        <a class="btn btn-sm {% if source == 'files' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'index' %}?source=files">Файлы JSON</a>
+        <a class="btn btn-sm {% if source == 'db' %}btn-primary{% else %}btn-outline-primary{% endif %}" href="{% url 'index' %}?source=db">База данных</a>
+    </nav>
+    {% if source == 'db' %}
+    <label class="form-label" for="search-input">Поиск по имени карточки</label>
+    <input class="form-control mb-2" id="search-input" type="search" data-url="{% url 'search' %}">
+    <p id="search-status" role="status"></p>
+    <div id="search-results" aria-live="polite">{% include "records/db_table.html" %}</div>
+    <script defer src="{% static 'records/search.js' %}"></script>
+    {% else %}
     {% if skipped %}<p class="error">Пропущено повреждённых файлов: {{ skipped }}.</p>{% endif %}
     {% if rows %}
     <p>Всего записей: {{ rows|length }}.</p>
     <div class="table-responsive">
-        <table>
+        <table class="table table-sm align-middle">
             <thead><tr><th>Карточка</th><th>Дата</th><th>Пульс</th><th>Температура, °C</th></tr></thead>
             <tbody>
             {% for row in rows %}
@@ -38,6 +50,7 @@
     </div>
     {% else %}
         <p>Записей пока нет.</p>
+    {% endif %}
     {% endif %}
 </section>
 {% endblock %}

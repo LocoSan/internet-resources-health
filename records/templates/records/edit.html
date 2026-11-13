@@ -1,0 +1,13 @@
+{% extends "records/base.html" %}
+{% block content %}
+<section>
+    <h2>Изменить запись</h2>
+    <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}<p class="error">Исправьте ошибки в форме.</p>{% endif %}
+        {{ form.as_p }}
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <a class="btn btn-outline-secondary" href="{% url 'index' %}?source=db">Отмена</a>
+    </form>
+</section>
+{% endblock %}

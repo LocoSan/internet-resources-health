@@ -1,0 +1,25 @@
+{% if rows %}
+<div class="table-responsive">
+    <table class="table table-sm align-middle">
+        <thead><tr><th>Карточка</th><th>Дата</th><th>Пульс</th><th>Температура, °C</th><th>Действия</th></tr></thead>
+        <tbody>
+        {% for row in rows %}
+        <tr>
+            <td>{{ row.patient }}</td><td>{{ row.date|date:"Y-m-d" }}</td><td>{{ row.pulse }}</td><td>{{ row.temperature }}</td>
+            <td>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'edit' row.pk %}">Изменить</a>
+                <form class="d-inline" method="post" action="{% url 'delete' row.pk %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% elif search %}
+<p>Ничего не найдено.</p>
+{% else %}
+<p>Записей в базе пока нет.</p>
+{% endif %}

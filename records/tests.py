@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
 
 class JsonRecordsTests(SimpleTestCase):
@@ -46,3 +46,41 @@ class JsonRecordsTests(SimpleTestCase):
             response = self.client.post("/import/", {"file": upload})
             self.assertContains(response, "Файл отклонён", status_code=400)
             self.assertEqual(list(self.directory.iterdir()), [])
+
+
+class DatabaseRecordsTests(TestCase):
+    record = JsonRecordsTests.record
+
+    def setUp(self):
+        temporary = TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.enterContext(self.settings(RECORDS_DIR=Path(temporary.name)))
+
+    def test_database_create_duplicate_and_read(self):
+        data = {**self.record, "storage": "db"}
+        self.assertRedirects(self.client.post("/", data), "/?source=db")
+        response = self.client.post("/", data)
+        self.assertContains(response, "Такая запись уже есть")
+        self.assertEqual(self.client.get("/?source=db").context["rows"].count(), 1)
+        self.assertNotContains(self.client.get("/?source=files"), "Карточка А")
+
+    def test_search_edit_and_delete(self):
+        self.client.post("/", {**self.record, "storage": "db", "patient": "КАРТОЧКА А"})
+        self.client.post("/", {**self.record, "storage": "db", "patient": "Другая карточка"})
+        response = self.client.get("/search/", {"q": "карточка а"})
+        self.assertContains(response, "КАРТОЧКА А")
+        self.assertNotContains(response, "Другая карточка")
+
+        row = self.client.get("/?source=db").context["rows"].get(patient="КАРТОЧКА А")
+        self.assertContains(self.client.post(f"/edit/{row.pk}/", {**self.record, "pulse": 999}), "ошибки")
+        row.refresh_from_db()
+        self.assertEqual(row.pulse, 73)
+        self.assertRedirects(
+            self.client.post(f"/edit/{row.pk}/", {**self.record, "pulse": 84}), "/?source=db"
+        )
+        row.refresh_from_db()
+        self.assertEqual(row.pulse, 84)
+        self.assertEqual(self.client.get(f"/delete/{row.pk}/").status_code, 405)
+        self.assertRedirects(self.client.post(f"/delete/{row.pk}/"), "/?source=db")
+        self.assertContains(self.client.get("/?source=db"), "Другая карточка")
+        self.assertNotContains(self.client.get("/?source=db"), "Карточка А")

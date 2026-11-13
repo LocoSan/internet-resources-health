@@ -13,5 +13,14 @@ class MeasurementForm(forms.Form):
     )
 
 
+class CreateForm(MeasurementForm):
+    storage = forms.ChoiceField(
+        label="Куда сохранить",
+        choices=[("files", "В файл JSON"), ("db", "В базу данных")],
+        initial="files",
+        required=False,
+    )
+
+
 class UploadForm(forms.Form):
     file = forms.FileField(label="Файл JSON", widget=forms.ClearableFileInput(attrs={"accept": ".json"}))
