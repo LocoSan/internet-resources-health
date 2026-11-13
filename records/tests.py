@@ -21,7 +21,10 @@ class JsonRecordsTests(SimpleTestCase):
         self.enterContext(self.settings(RECORDS_DIR=self.directory))
 
     def test_empty_folder_has_message(self):
-        self.assertContains(self.client.get("/"), "Записей пока нет")
+        response = self.client.get("/")
+        self.assertContains(response, "Записей пока нет")
+        self.assertNotContains(response, "/export/")
+        self.assertEqual(self.client.get("/export/").status_code, 404)
 
     def test_form_writes_valid_record(self):
         self.assertRedirects(self.client.post("/", self.record), "/")
@@ -51,6 +54,35 @@ class JsonRecordsTests(SimpleTestCase):
             response = self.client.post("/import/", {"file": upload})
             self.assertContains(response, "Файл отклонён", status_code=400)
             self.assertEqual(list(self.directory.iterdir()), [])
+
+    def test_large_export_can_be_imported_part_by_part(self):
+        record = {**self.record, "temperature": 36.6}
+        for name in ("a.json", "b.json"):
+            (self.directory / name).write_text(
+                json.dumps([record] * 300, ensure_ascii=False), encoding="utf-8"
+            )
+
+        first = self.client.get("/export/")
+        second = self.client.get("/export/?part=2")
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(first.json() + second.json(), [record] * 600)
+        self.assertContains(self.client.get("/"), "/export/?part=2")
+        self.assertEqual(self.client.get("/export/?part=3").status_code, 404)
+        for part in (first, second):
+            upload = SimpleUploadedFile("part.json", part.content)
+            self.assertRedirects(self.client.post("/import/", {"file": upload}), "/")
+
+    def test_export_respects_byte_limit_when_rows_need_escaping(self):
+        record = {**self.record, "patient": "A" + "\x1f" * 78 + "B", "temperature": 36.6}
+        for name in ("a.json", "b.json"):
+            (self.directory / name).write_text(json.dumps([record] * 250), encoding="utf-8")
+
+        first = self.client.get("/export/")
+        second = self.client.get("/export/?part=2")
+        self.assertEqual(first.json() + second.json(), [record] * 500)
+        for part in (first, second):
+            self.assertLessEqual(len(part.content), 256 * 1024)
 
 
 class DatabaseRecordsTests(TestCase):

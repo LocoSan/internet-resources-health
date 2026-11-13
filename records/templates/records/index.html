@@ -19,7 +19,16 @@
         {{ upload_form.as_p }}
         <button class="btn btn-outline-primary" type="submit">Загрузить</button>
     </form>
+    {% if parts|length == 1 %}
     <p><a href="{% url 'export_json' %}">Скачать все записи JSON</a></p>
+    {% elif parts %}
+    <p>Выгрузка разбита на файлы. Загружайте их обратно по одному.</p>
+    <ul>
+        {% for number in parts %}
+        <li><a href="{% url 'export_json' %}?part={{ number }}">Скачать часть {{ number }}</a></li>
+        {% endfor %}
+    </ul>
+    {% endif %}
 </section>
 
 <section>

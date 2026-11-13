@@ -3,7 +3,7 @@
 1. Откройте Bash Console. Клонируйте опубликованный репозиторий и выберите версию `lab-04`:
 
    ```bash
-   git clone <адрес-репозитория> health-journal
+   git clone https://github.com/LocoSan/internet-resources-health.git health-journal
    cd health-journal
    git switch --detach lab-04
    python3.12 -m venv .venv

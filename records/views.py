@@ -1,22 +1,23 @@
 import json
 
 from django.db import IntegrityError, transaction
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from .forms import CreateForm, MeasurementForm, UploadForm
-from .json_files import plain_record, read_json_files, save_json, validate_json
+from .json_files import export_parts, plain_record, read_json_files, save_json, validate_json
 from .models import Measurement
 
 
 def show_page(request, form=None, upload_error="", status=200):
     source = "db" if request.GET.get("source") == "db" and not upload_error else "files"
     if source == "db":
-        rows, skipped = Measurement.objects.all(), 0
+        rows, skipped, parts = Measurement.objects.all(), 0, []
     else:
         rows, skipped = read_json_files()
+        parts = range(1, len(export_parts(rows)) + 1)
     return render(request, "records/index.html", {
         "form": form if form is not None else CreateForm(initial={"storage": source}),
         "source": source,
@@ -24,6 +25,7 @@ def show_page(request, form=None, upload_error="", status=200):
         "upload_error": upload_error,
         "rows": rows,
         "skipped": skipped,
+        "parts": parts,
     }, status=status)
 
 
@@ -94,7 +96,14 @@ def import_json(request):
 
 @require_GET
 def export_json(request):
+    try:
+        number = int(request.GET.get("part", "1"))
+    except ValueError:
+        raise Http404("Часть выгрузки не найдена.")
     rows, _ = read_json_files()
-    response = JsonResponse(rows, safe=False, json_dumps_params={"ensure_ascii": False, "indent": 2})
-    response["Content-Disposition"] = 'attachment; filename="measurements.json"'
+    parts = export_parts(rows)
+    if not 1 <= number <= len(parts):
+        raise Http404("Часть выгрузки не найдена.")
+    response = HttpResponse(parts[number - 1], content_type="application/json")
+    response["Content-Disposition"] = f'attachment; filename="measurements-{number}.json"'
     return response

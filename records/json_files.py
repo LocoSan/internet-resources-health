@@ -3,7 +3,10 @@ from uuid import uuid4
 
 from django.conf import settings
 
-from .forms import MeasurementForm
+from .forms import MAX_JSON_BYTES, MeasurementForm
+
+
+MAX_JSON_ROWS = 500
 
 
 def plain_record(values):
@@ -17,8 +20,8 @@ def plain_record(values):
 
 def validate_json(payload):
     rows = payload if isinstance(payload, list) else [payload]
-    if not 1 <= len(rows) <= 500:
-        raise ValueError("В файле должно быть от 1 до 500 записей.")
+    if not 1 <= len(rows) <= MAX_JSON_ROWS:
+        raise ValueError(f"В файле должно быть от 1 до {MAX_JSON_ROWS} записей.")
     validated = []
     for number, row in enumerate(rows, start=1):
         if (
@@ -58,3 +61,19 @@ def read_json_files():
         except (ValueError, OSError, RecursionError):
             skipped += 1
     return rows, skipped
+
+
+def export_parts(rows):
+    parts = []
+    part = []
+    size = 2
+    for row in rows:
+        encoded = json.dumps(row, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if len(part) == MAX_JSON_ROWS or size + len(encoded) + bool(part) > MAX_JSON_BYTES:
+            parts.append(b"[" + b",".join(part) + b"]")
+            part, size = [], 2
+        size += len(encoded) + bool(part)
+        part.append(encoded)
+    if part:
+        parts.append(b"[" + b",".join(part) + b"]")
+    return parts

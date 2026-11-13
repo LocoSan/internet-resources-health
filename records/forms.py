@@ -1,6 +1,9 @@
 from django import forms
 
 
+MAX_JSON_BYTES = 256 * 1024
+
+
 class MeasurementForm(forms.Form):
     patient = forms.CharField(label="Имя учебной карточки", max_length=80)
     date = forms.DateField(label="Дата", input_formats=["%Y-%m-%d"], widget=forms.DateInput(
@@ -29,6 +32,6 @@ class UploadForm(forms.Form):
         upload = self.cleaned_data["file"]
         if not upload.name.lower().endswith(".json"):
             raise forms.ValidationError("Выберите файл с расширением .json.")
-        if upload.size > 256 * 1024:
+        if upload.size > MAX_JSON_BYTES:
             raise forms.ValidationError("Размер файла больше 256 КБ.")
         return upload
